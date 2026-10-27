@@ -8,9 +8,9 @@ SVS 新媒体后台的 macOS Apple Silicon 构建与下载仓库。
 
 从 Releases 下载 macOS ARM64 的 ZIP 或 DMG，适用于 Apple Silicon Mac。DMG 中请将整个 `SVS 新媒体后台` 文件夹拖到 Applications，然后打开其中的 `新媒体后台.app`。ZIP 同样需要保留完整目录，不能单独移动 `.app` 启动入口。
 
-当前版本需要 Node.js 22+，建议使用 Node.js 官方 macOS 安装器；登录和云端 AI 服务需要联网。本次发布没有 Apple Developer 签名及公证，首次打开可能需要在系统“隐私与安全性”中确认允许。Windows 的自动下载依赖方案尚未用于此 macOS 构建。
+macOS 与 Windows 均支持登录后从国内镜像自动下载共享运行资源，无需单独安装 Node.js；登录和云端 AI 服务需要联网。本次发布没有 Apple Developer 签名及公证，首次打开可能需要在系统“隐私与安全性”中确认允许。提供 lite 精简版及 offline 预置资源版，设置中可查看下载进度和检查并修复。
 
-无限画布目前仅支持 Windows，macOS 版尚未接入该功能。
+macOS 支持无限画布、邮箱绑定及会话恢复、设置入口隐藏、无边框浮动窗口控制和系统钥匙串保护的记住密码。
 
 ## 维护者构建
 

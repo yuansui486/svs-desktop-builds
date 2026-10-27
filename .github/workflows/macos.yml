@@ -48,16 +48,28 @@ jobs:
           node-version: '22.14.0'
       - name: Prepare macOS dependencies
         run: bash scripts/prepare-macos.sh "$RUNNER_TEMP/svs-source"
+      - name: Test archive permissions and shared resource integrity
+        working-directory: ${{ runner.temp }}/svs-source
+        run: cargo test -p skill-core -p skill-packager --lib
       - name: Build complete desktop distribution
         working-directory: ${{ runner.temp }}/svs-source
         run: |
-          cargo run --release -p skill-packager --bin svs-app-packager -- --target mac-arm64 --edition offline --output "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64-offline.zip"
+          cargo run --release -p skill-packager --bin svs-app-packager -- --target mac-arm64 --edition both --output "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64-lite.zip"
       - name: Verify extracted package and render videos
         run: python3 scripts/verify-macos.py "$RUNNER_TEMP/svs-source" "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64-offline.zip"
+      - name: Test credentials and WebKit canvas behavior
+        working-directory: ${{ runner.temp }}/svs-source
+        run: |
+          cargo test --manifest-path crates/svs-gui/Cargo.toml --features custom-protocol --lib saved_login::tests -- --nocapture
+          cargo test --manifest-path crates/svs-gui/Cargo.toml --features custom-protocol --lib canvas::tests -- --nocapture
+          npm install --prefix "$RUNNER_TEMP/svs-browser-tests" --no-audit --no-fund playwright@1.56.1
+          "$RUNNER_TEMP/svs-browser-tests/node_modules/.bin/playwright" install webkit
+          SVS_TEST_WEBKIT=1 node crates/svs-gui/tests/canvas-navigation-smoke.mjs "$RUNNER_TEMP/svs-browser-tests/node_modules/playwright"
+          cargo run --manifest-path crates/svs-gui/Cargo.toml --features custom-protocol --example macos_canvas_smoke
       - name: Create DMG and checksums
         run: bash scripts/create-dmg.sh "$RUNNER_TEMP/svs-delivery"
       - name: Publish verified macOS package
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "macos-$BUILD_ID" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "SVS macOS Apple Silicon · $BUILD_ID" --notes-file RELEASE-NOTES.md "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64-offline.zip" "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64.dmg" "$RUNNER_TEMP/svs-delivery/SHA256SUMS.txt"
+          gh release create "macos-$BUILD_ID" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "SVS macOS Apple Silicon · $BUILD_ID" --notes-file RELEASE-NOTES.md "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64-lite.zip" "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64-offline.zip" "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64.dmg" "$RUNNER_TEMP/svs-delivery/SHA256SUMS.txt"
