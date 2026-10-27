@@ -1,7 +1,8 @@
 适用于 Apple Silicon Mac（ARM64），本轮构建环境为 macOS 15。
 
-- ZIP：解压完整目录后打开“新媒体后台.app”。
-- DMG：把整个“SVS 新媒体后台”文件夹拖到 Applications，再打开其中的应用入口。
+- ZIP：解压得到一个完整的“新媒体后台.app”，拖到 Applications。
+- DMG：直接把“新媒体后台.app”拖到 Applications 即可，无外部程序文件夹。
+- 账号、素材、草稿、任务和共享工具保存在用户 Application Support/SVS 中，替换应用升级会保留；旧文件夹版数据暂不自动迁移。
 - 无需安装系统 Node.js；精简版登录后从国内镜像自动准备共享运行资源，支持重试及检查修复。登录和云端服务仍需联网。
 - ZIP 提供 lite 与 offline；DMG 使用 lite。字体、组件、模型仍随包发布。
 - 支持无限画布、内嵌账号绑定/恢复、网页入口隐藏、浮动窗口控制和记住账号密码。
