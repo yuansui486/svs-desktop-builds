@@ -1,0 +1,32 @@
+name: Verify released macOS drag installation
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  install:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Download released DMG
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^macos-[0-9_]+$ ]] || exit 1
+          mkdir -p "$RUNNER_TEMP/delivery"
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern svs-app-mac-arm64.dmg --dir "$RUNNER_TEMP/delivery"
+      - name: Install single app, eject DMG and launch login window
+        run: python3 scripts/install-smoke.py "$RUNNER_TEMP/delivery/svs-app-mac-arm64.dmg"
+      - name: Save installation evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macos-install-evidence
+          path: ${{ runner.temp }}/install-evidence
