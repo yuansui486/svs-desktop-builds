@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        required: true
+        required: false
         type: string
 permissions:
   contents: read
@@ -16,6 +16,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Download released DMG
+        if: inputs.release_tag != ''
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.release_tag }}
@@ -24,8 +25,13 @@ jobs:
           mkdir -p "$RUNNER_TEMP/delivery"
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern svs-app-mac-arm64.dmg --dir "$RUNNER_TEMP/delivery"
       - name: Install single app, eject DMG and launch login window
+        if: inputs.release_tag != ''
         run: python3 scripts/install-smoke.py "$RUNNER_TEMP/delivery/svs-app-mac-arm64.dmg"
+      - name: Verify native window observation harness
+        if: inputs.release_tag == ''
+        run: python3 scripts/check-install-harness.py
       - name: Save installation evidence
+        if: inputs.release_tag != ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: macos-install-evidence
