@@ -55,6 +55,13 @@ jobs:
         working-directory: ${{ runner.temp }}/svs-source
         run: |
           cargo run --release -p skill-packager --bin svs-app-packager -- --target mac-arm64 --edition both --output "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64-lite.zip"
+      - name: Preserve unverified packages for build diagnostics
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: unverified-macos-packages
+          path: ${{ runner.temp }}/svs-delivery/*.zip
+          compression-level: 0
+          retention-days: 3
       - name: Verify extracted package and render videos
         run: python3 scripts/verify-macos.py "$RUNNER_TEMP/svs-source" "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64-offline.zip"
       - name: Test credentials and WebKit canvas behavior
@@ -68,6 +75,13 @@ jobs:
           cargo run --manifest-path crates/svs-gui/Cargo.toml --features custom-protocol --example macos_canvas_smoke
       - name: Create DMG and checksums
         run: bash scripts/create-dmg.sh "$RUNNER_TEMP/svs-delivery"
+      - name: Verify drag installation and real application window
+        run: python3 scripts/install-smoke.py "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64.dmg"
+      - name: Save installation evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macos-install-evidence
+          path: ${{ runner.temp }}/install-evidence
       - name: Publish verified macOS package
         env:
           GH_TOKEN: ${{ github.token }}

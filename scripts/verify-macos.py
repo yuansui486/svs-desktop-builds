@@ -9,7 +9,7 @@ import sys
 import tempfile
 
 source, archive = map(lambda p: Path(p).resolve(), sys.argv[1:])
-work = Path(tempfile.mkdtemp(prefix='svs-macos-verify-'))
+work = Path(tempfile.mkdtemp(prefix='svs-macos-verify-')).resolve()
 subprocess.run(['ditto', '-x', '-k', str(archive), str(work / 'extracted')], check=True)
 bundle = work / 'extracted' / '新媒体后台.app'
 assert list((work / 'extracted').iterdir()) == [bundle], 'ZIP must contain one app only'

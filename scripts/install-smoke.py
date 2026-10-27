@@ -8,7 +8,7 @@ import sys
 import tempfile
 
 dmg = Path(sys.argv[1]).resolve()
-work = Path(tempfile.mkdtemp(prefix='svs-drag-install-'))
+work = Path(tempfile.mkdtemp(prefix='svs-drag-install-')).resolve()
 mount = work / 'mounted'
 support = Path.home() / 'Library/Application Support/SVS'
 assert not support.exists(), 'This smoke test requires a fresh macOS runner'
