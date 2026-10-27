@@ -10,6 +10,8 @@ SVS 新媒体后台的 macOS Apple Silicon 构建与下载仓库。
 
 当前版本需要 Node.js 22+，建议使用 Node.js 官方 macOS 安装器；登录和云端 AI 服务需要联网。本次发布没有 Apple Developer 签名及公证，首次打开可能需要在系统“隐私与安全性”中确认允许。Windows 的自动下载依赖方案尚未用于此 macOS 构建。
 
+无限画布目前仅支持 Windows，macOS 版尚未接入该功能。
+
 ## 维护者构建
 
 1. 从开发仓库运行 `packaging/macos/source_bundle.py` 生成、校验并上传构建输入。每个快照使用独立 Secret，不包含 Git 历史、运行数据或开发机凭据。
