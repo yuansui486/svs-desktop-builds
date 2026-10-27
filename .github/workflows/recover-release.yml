@@ -1,0 +1,49 @@
+name: Recover verified single-app release
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover:
+    runs-on: macos-15
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Require prior functional and installation verification
+        run: |
+          gh run view 40462574469 --repo "$GITHUB_REPOSITORY" --json headSha,jobs > "$RUNNER_TEMP/verified-run.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          run = json.loads((Path(os.environ['RUNNER_TEMP']) / 'verified-run.json').read_text())
+          assert run['headSha'] == 'af8f942471ed1433ade778e1fe2fdea995072286'
+          steps = {s['name']: s['conclusion'] for s in run['jobs'][0]['steps']}
+          for name in ['Build complete desktop distribution', 'Test archive permissions and shared resource integrity', 'Verify extracted package and render videos', 'Test credentials and WebKit canvas behavior', 'Verify drag installation and real application window']:
+              assert steps[name] == 'success', (name, steps[name])
+          PY
+      - name: Recover exact tested archives
+        run: |
+          mkdir -p "$RUNNER_TEMP/svs-delivery"
+          gh run download 40462574469 --repo "$GITHUB_REPOSITORY" --name unverified-macos-packages --dir "$RUNNER_TEMP/svs-delivery"
+      - name: Recreate DMG and verify installation
+        run: |
+          bash scripts/create-dmg.sh "$RUNNER_TEMP/svs-delivery"
+          python3 scripts/install-smoke.py "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64.dmg"
+      - name: Preserve final verified deliverables
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: verified-macos-deliverables
+          path: ${{ runner.temp }}/svs-delivery
+          compression-level: 0
+          retention-days: 7
+      - name: Upload verified deliverables to prepared release
+        run: |
+          gh release upload macos-20261027_05 --repo "$GITHUB_REPOSITORY" "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64-lite.zip" "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64-offline.zip" "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64.dmg" "$RUNNER_TEMP/svs-delivery/SHA256SUMS.txt" --clobber
