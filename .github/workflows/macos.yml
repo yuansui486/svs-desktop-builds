@@ -1,0 +1,63 @@
+name: Build macOS ARM64
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: Encrypted source snapshot ID (digits and underscores)
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: macos-release
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    env:
+      BUILD_ID: ${{ inputs.build_id }}
+      CARGO_BUILD_JOBS: '3'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_INCREMENTAL: '0'
+      CARGO_TERM_COLOR: never
+      MACOSX_DEPLOYMENT_TARGET: '14.0'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Download encrypted build input
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$BUILD_ID" =~ ^[0-9_]+$ ]] || exit 1
+          test "$(uname -m)" = arm64
+          mkdir -p "$RUNNER_TEMP/svs-input"
+          gh release download "source-$BUILD_ID" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/svs-input" --pattern source.enc --pattern manifest.json
+          python3 -m venv "$RUNNER_TEMP/svs-ci-venv"
+          "$RUNNER_TEMP/svs-ci-venv/bin/pip" install --disable-pip-version-check cryptography==46.0.3
+      - name: Decrypt authenticated source snapshot
+        env:
+          SVS_SOURCE_KEY: ${{ secrets[format('SVS_SOURCE_KEY_{0}', inputs.build_id)] }}
+        run: |
+          "$RUNNER_TEMP/svs-ci-venv/bin/python" scripts/decrypt.py "$RUNNER_TEMP/svs-input" "$RUNNER_TEMP/svs-source"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.14.0'
+      - name: Prepare macOS dependencies
+        run: bash scripts/prepare-macos.sh "$RUNNER_TEMP/svs-source"
+      - name: Build complete desktop distribution
+        working-directory: ${{ runner.temp }}/svs-source
+        run: |
+          cargo run --release -p skill-packager --bin svs-app-packager -- --target mac-arm64 --edition offline --output "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64-offline.zip"
+      - name: Verify extracted package and render videos
+        run: python3 scripts/verify-macos.py "$RUNNER_TEMP/svs-source" "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64-offline.zip"
+      - name: Create DMG and checksums
+        run: bash scripts/create-dmg.sh "$RUNNER_TEMP/svs-delivery"
+      - name: Publish verified macOS package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "macos-$BUILD_ID" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "SVS macOS Apple Silicon · $BUILD_ID" --notes-file RELEASE-NOTES.md "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64-offline.zip" "$RUNNER_TEMP/svs-delivery/svs-app-mac-arm64.dmg" "$RUNNER_TEMP/svs-delivery/SHA256SUMS.txt"
