@@ -1,38 +1,41 @@
-# macOS 功能对齐验收
+# macOS 单应用安装验收
 
-日期：2026-10-27；构建输入 `20261027_04`，替代旧的完整资源版 `20261027_03`。
+日期：2026-10-27；构建输入 `20261027_05`。
 
-- [成功构建与完整日志](https://github.com/yuansui486/svs-desktop-builds/actions/runs/40455489117)
-- [正式下载](https://github.com/yuansui486/svs-desktop-builds/releases/tag/macos-20261027_04)
+- [应用构建与功能验证](https://github.com/yuansui486/svs-desktop-builds/actions/runs/40462574469)
+- [恢复成品上传与再次安装验证](https://github.com/yuansui486/svs-desktop-builds/actions/runs/40465909949)
+- [下载单应用安装包](https://github.com/yuansui486/svs-desktop-builds/releases/tag/macos-20261027_05)
 
-## 已实现
+## 安装行为
 
-macOS ARM64 与 Windows 使用相同的后台资源管理器：登录后从固定国内镜像自动下载 Node、Chrome、FFmpeg/FFprobe、Remotion 和 HyperFrames，各技能共用工具，无需安装系统 Node；提供 lite/offline、进度、重试、完整校验及修复。Mac 无限画布复用绑定、会话恢复、首页拦截、设置入口隐藏和浮动窗口控制；WKWebView 使用独立非持久会话。记住密码使用 Keychain 保护的 AES-256-GCM 密钥，文件中仅保存密文。
+ZIP 仅包含 `新媒体后台.app`。DMG 根只有该应用与 Applications 快捷方式；复制应用、弹出 DMG 后可正常打开登录窗口。应用包只读，用户数据位于 `~/Library/Application Support/SVS/data/`；版本化运行载荷位于同级 installations。替换应用保留账号文件、素材、草稿、任务、偏好、共享工具和缓存。旧版本部署暂保留，防止运行任务和旧路径引用失效，会占用额外磁盘。
 
-## 实际验证
+## 已完成验证
 
 在 GitHub macos-15 ARM64 环境完成：
 
-- skill-core 29 项、skill-packager 11 项测试，包括归档权限、真实符号链接、链接逃逸、损坏/缺失检测及续传。
-- 正式压缩包解压后完整预检，四技能认证 mock 和入口检查。
-- 无系统 Node 路径下实际渲染 HyperFrames、数字人媒体、口播横竖屏字体/图片/音效/字幕组件，以及 PPT SpecProject + ImageSlide。
-- 精简版从空缓存经国内镜像安装全部模块并完成预检；破坏 FFmpeg 后断网从已验证缓存修复。
-- 带空格目录迁移后预检和 launcher 运行通过。
-- macOS Keychain 凭据保存、恢复、账号隔离、损坏拒绝与清除测试通过。
-- 3 项画布 Rust 测试及 17 项 WebKit 网页导航、身份校验、账号入口隐藏、重载测试通过。
-- 真实 WKWebView 子窗口测试通过：会话注入、网页显示、隐藏账号操作、无边框、三个悬浮控件、最小化/恢复/最大化、窗口激活、首页导航阻断与遮罩。
-- DMG 创建、正式发布完成，Release 文件 SHA256 与 GitHub API 摘要一致。
+- skill-core 31 项、skill-packager 11 项测试；包含并发部署、中断后重试、同版本复用、升级数据保留、载荷损坏拒绝及归档权限。
+- 发布 ZIP 顶层唯一 `.app`、原生 Mach-O 启动器、Info.plist、图标及 ad-hoc 包签名校验。
+- 单 `.app` 改名移动、从只读磁盘部署成功；运行后包签名保持有效。
+- 用系统 LaunchServices 启动复制后的正式应用，检测到 1040×681 可见窗口，并保存实际登录界面截图。
+- 不同载荷升级后凭据文件、草稿、memory 保留，工具目录仍指向同一稳定位置。
+- 四技能入口、认证 mock 与本地视频渲染通过，覆盖 HyperFrames、数字人媒体、口播横竖屏组件与 PPT。
+- 无系统 Node 路径下，精简版从国内镜像空缓存安装全部模块；损坏 FFmpeg 后断网修复成功。
+- Keychain 凭据保存恢复、3 项画布 Rust 测试、17 项 WebKit 网页保护测试通过。
+- 原生 WKWebView 会话注入、账号操作隐藏、浮动窗口控件、窗口激活及首页拦截通过。
 
-## 文件
+首次构建的路径比较检查因 macOS `/var` 与 `/private/var` 别名失败；规范化测试路径后全部功能与安装测试通过。发布步骤遇到 GitHub integration HTTP 403，使用已有维护者授权建立标签和草稿；恢复工作流只接受原构建指定 SHA 且所有功能/安装步骤成功的成品，在重新生成 DMG 并再次安装验证后上传。未重新编译或修改已验证 ZIP。
+
+## 边界
+
+适用于 Apple Silicon Mac、macOS 14 及以上。应用使用 ad-hoc 签名，没有 Apple Developer 签名及公证。旧文件夹版数据暂不自动迁移，请保留旧目录。原生画布与认证测试使用本地模拟账号/站点，未调用真实付费云端生成，也未逐项重跑真实账号的全部业务流程。
+
+## 成品摘要
+
+Release 的 GitHub SHA256 与发布校验文件逐项一致。
 
 | 文件 | 字节 | SHA256 |
 | --- | ---: | --- |
-| svs-app-mac-arm64-lite.zip | 439981191 | b0c61f00250125391ba7b694c99f58605ddb25fd227d887523e14faa64f2bcac |
-| svs-app-mac-arm64-offline.zip | 816442093 | c538e7185d79764b3dbe6b86337b811ffea84b9d586adb587bc26ad770e1b92f |
-| svs-app-mac-arm64.dmg | 465084517 | 389722e6f9488d3798992fba5aa9d70b6b554924a8a509c38aefe28956eda701 |
-
-精简 ZIP 相对上一版 940213635 字节缩小约 53.2%；DMG 采用精简版。下载后依赖仍会占用磁盘。
-
-## 验收边界
-
-仅支持 Apple Silicon。没有 Apple Developer 签名或公证。DMG 需复制整个程序目录后运行。原生画布和认证测试使用本地模拟站点/账号，未使用真实验证码完成线上绑定，也未调用真实付费云端服务；测试通过不等于覆盖所有线上操作或用户机器环境。主界面其余业务沿用共同实现，未逐项重跑全部真实账号流程。
+| svs-app-mac-arm64-lite.zip | 439788630 | 991ae19ae4a2dcbd14b76f5ba240a7fc4220eb19fcdb1d93d11f76c2110d14c8 |
+| svs-app-mac-arm64-offline.zip | 808198371 | cebee5c7822306bdb591a74d080479f12ce629a4a6676bbf1b3a3eec2623fb82 |
+| svs-app-mac-arm64.dmg | 441752517 | 8e29bebea975a7d961ab720ffd66265ac4d655bd667d05515e3bc1ddd5353bbc |
