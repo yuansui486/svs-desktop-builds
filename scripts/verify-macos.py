@@ -2,6 +2,7 @@
 import json
 import hashlib
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -41,7 +42,10 @@ for relative in ['illustration-video-maker/tools/bin/runner', 'num-people/tools/
     run([app / 'skills' / relative, 'check-env'])
 tests = source / 'crates/svs-gui/tests'
 run([node, tests / 'integrated-skills-auth-smoke.mjs', app])
-run([node, tests / 'integrated-media-smoke.mjs', app])
+integrated_media = run([node, tests / 'integrated-media-smoke.mjs', app], True)
+print(integrated_media)
+integrated_work = re.search(r'Outputs: (.+)', integrated_media)
+assert integrated_work, 'Missing integrated media output directory'
 modules = deps['remotion'] / 'node_modules'
 env['SVS_TEST_ASSETS'] = str(app / 'runtime/assets')
 chrome = deps['chrome'] / 'chrome-headless-shell'
@@ -51,6 +55,7 @@ run([node, tests / 'component-resource-render-smoke.cjs', modules, work])
 ppt = run([app / 'skills/ppt-video-create/tools/bin/ppt-runner', 'check-env'], True)
 view = next(line.split('packaged Remotion runtime: ', 1)[1].strip() for line in ppt.splitlines() if 'packaged Remotion runtime: ' in line)
 run([node, tests / 'ppt-shared-runtime-smoke.cjs', view, modules, work])
+run([node, tests / 'packaged-media-content-smoke.cjs', app, work, integrated_work.group(1).strip()])
 # Lite starts from an empty dependency directory, with no system Node on PATH.
 subprocess.run(['cargo', 'build', '--release', '-p', 'skill-packager', '--example', 'dependencies'], cwd=source, check=True)
 lite_zip = archive.with_name('svs-app-mac-arm64-lite.zip')
